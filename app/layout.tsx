@@ -3,6 +3,8 @@ import './globals.css'
 import { Providers } from './components/Providers'
 import { Navbar } from './components/Navbar'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Arno Game - World Cup 2026 Edition',
   description: 'ทายผลฟุตบอล World Cup 2026',
