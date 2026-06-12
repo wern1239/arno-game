@@ -32,6 +32,9 @@ export function Navbar() {
           <Link href="/sponsors" className={`relative px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${pathname === '/sponsors' ? 'bg-amber-500 text-white' : 'bg-gradient-to-r from-amber-500 to-yellow-400 text-amber-950 hover:from-amber-400 hover:to-yellow-300'}`}>
             🏅 สปอนเซอร์
           </Link>
+          <Link href="/join" className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${pathname === '/join' ? 'bg-green-400 text-green-950' : 'bg-gradient-to-r from-[#06C755] to-green-400 text-white hover:from-green-500 hover:to-green-300'}`}>
+            💬 OpenChat
+          </Link>
           <Link href="/archive" className={linkClass('/archive')}>ประกาศเก่า</Link>
           {session ? (
             <>
@@ -81,6 +84,9 @@ export function Navbar() {
           <Link href="/leaderboard" onClick={() => setOpen(false)} className={linkClass('/leaderboard')}>อันดับ</Link>
           <Link href="/sponsors" onClick={() => setOpen(false)} className={`block px-3 py-2 rounded-lg text-sm font-bold transition-colors ${pathname === '/sponsors' ? 'bg-amber-500 text-white' : 'bg-gradient-to-r from-amber-500 to-yellow-400 text-amber-950'}`}>
             🏅 สปอนเซอร์
+          </Link>
+          <Link href="/join" onClick={() => setOpen(false)} className={`block px-3 py-2 rounded-lg text-sm font-bold transition-colors ${pathname === '/join' ? 'bg-green-400 text-green-950' : 'bg-gradient-to-r from-[#06C755] to-green-400 text-white'}`}>
+            💬 OpenChat
           </Link>
           <Link href="/archive" onClick={() => setOpen(false)} className={linkClass('/archive')}>ประกาศเก่า</Link>
           {session ? (
