@@ -13,6 +13,12 @@ type Announcement = {
   createdAt: string
 }
 
+type Sponsor = {
+  id: string
+  name: string
+  prize: string
+}
+
 type Prediction = {
   matchId: string
   homeScore: number
@@ -32,6 +38,9 @@ export default function AdminPage() {
   const router = useRouter()
   const [newAnnouncement, setNewAnnouncement] = useState('')
   const [posting, setPosting] = useState(false)
+  const [newSponsorName, setNewSponsorName] = useState('')
+  const [newSponsorPrize, setNewSponsorPrize] = useState('')
+  const [postingSponsor, setPostingSponsor] = useState(false)
 
   const { data: predictions } = useSWR<Prediction[]>(
     session ? '/api/admin/my-predictions' : null,
@@ -39,6 +48,10 @@ export default function AdminPage() {
   )
   const { data: announcements, mutate: mutateAnnouncements } = useSWR<Announcement[]>(
     session ? '/api/announcements' : null,
+    fetcher
+  )
+  const { data: sponsors, mutate: mutateSponsors } = useSWR<Sponsor[]>(
+    session ? '/api/sponsors' : null,
     fetcher
   )
 
@@ -68,6 +81,25 @@ export default function AdminPage() {
   async function deleteAnnouncement(id: string) {
     await fetch(`/api/admin/announcements/${id}`, { method: 'DELETE' })
     mutateAnnouncements()
+  }
+
+  async function postSponsor() {
+    if (!newSponsorName.trim() || !newSponsorPrize.trim()) return
+    setPostingSponsor(true)
+    await fetch('/api/admin/sponsors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newSponsorName, prize: newSponsorPrize }),
+    })
+    setNewSponsorName('')
+    setNewSponsorPrize('')
+    mutateSponsors()
+    setPostingSponsor(false)
+  }
+
+  async function deleteSponsor(id: string) {
+    await fetch(`/api/admin/sponsors/${id}`, { method: 'DELETE' })
+    mutateSponsors()
   }
 
   if (status === 'loading') return null
@@ -150,6 +182,57 @@ export default function AdminPage() {
                     ลบ
                   </button>
                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Sponsors */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+        <h2 className="font-bold text-gray-300 mb-4">🏅 สปอนเซอร์และของรางวัล</h2>
+        <div className="flex flex-col gap-2 mb-4">
+          <input
+            type="text"
+            value={newSponsorName}
+            onChange={(e) => setNewSponsorName(e.target.value)}
+            placeholder="ชื่อสปอนเซอร์..."
+            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-600"
+          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newSponsorPrize}
+              onChange={(e) => setNewSponsorPrize(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && postSponsor()}
+              placeholder="ของรางวัล..."
+              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-600"
+            />
+            <button
+              onClick={postSponsor}
+              disabled={postingSponsor || !newSponsorName.trim() || !newSponsorPrize.trim()}
+              className="bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg font-semibold transition-colors"
+            >
+              เพิ่ม
+            </button>
+          </div>
+        </div>
+        {!sponsors?.length ? (
+          <p className="text-gray-600 text-sm">ยังไม่มีสปอนเซอร์</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {sponsors.map((s) => (
+              <div key={s.id} className="flex items-start gap-3 bg-gray-800 rounded-lg px-4 py-3">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-white">{s.name}</p>
+                  <p className="text-xs text-green-300 mt-0.5">🎁 {s.prize}</p>
+                </div>
+                <button
+                  onClick={() => deleteSponsor(s.id)}
+                  className="text-gray-500 hover:text-red-400 transition-colors text-xs shrink-0"
+                >
+                  ลบ
+                </button>
               </div>
             ))}
           </div>

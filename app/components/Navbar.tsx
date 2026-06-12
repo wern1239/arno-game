@@ -21,7 +21,7 @@ export function Navbar() {
           <span className="text-xl">⚽</span>
           <div className="flex flex-col leading-tight">
             <span className="text-sm sm:text-base font-bold">Arno Game</span>
-            <span className="text-xs text-green-400 font-normal hidden sm:block">World Cup 2026 Edition</span>
+            <span className="text-xs text-green-400 font-normal">World Cup 2026 Edition</span>
           </div>
         </Link>
 
@@ -29,6 +29,9 @@ export function Navbar() {
         <div className="hidden sm:flex gap-2 items-center text-sm">
           <Link href="/" className={linkClass('/')}>แมตช์</Link>
           <Link href="/leaderboard" className={linkClass('/leaderboard')}>อันดับ</Link>
+          <Link href="/sponsors" className={`relative px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${pathname === '/sponsors' ? 'bg-amber-500 text-white' : 'bg-gradient-to-r from-amber-500 to-yellow-400 text-amber-950 hover:from-amber-400 hover:to-yellow-300'}`}>
+            🏅 สปอนเซอร์
+          </Link>
           <Link href="/archive" className={linkClass('/archive')}>ประกาศเก่า</Link>
           {session ? (
             <>
@@ -76,6 +79,9 @@ export function Navbar() {
         <div className="sm:hidden border-t border-green-700 px-4 py-3 flex flex-col gap-1">
           <Link href="/" onClick={() => setOpen(false)} className={linkClass('/')}>แมตช์</Link>
           <Link href="/leaderboard" onClick={() => setOpen(false)} className={linkClass('/leaderboard')}>อันดับ</Link>
+          <Link href="/sponsors" onClick={() => setOpen(false)} className={`block px-3 py-2 rounded-lg text-sm font-bold transition-colors ${pathname === '/sponsors' ? 'bg-amber-500 text-white' : 'bg-gradient-to-r from-amber-500 to-yellow-400 text-amber-950'}`}>
+            🏅 สปอนเซอร์
+          </Link>
           <Link href="/archive" onClick={() => setOpen(false)} className={linkClass('/archive')}>ประกาศเก่า</Link>
           {session ? (
             <>
