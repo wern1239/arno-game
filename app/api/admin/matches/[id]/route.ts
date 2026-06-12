@@ -14,7 +14,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   const { id } = await params
   const body = await req.json()
-  const { homeScore, awayScore, status } = body
+  const { homeScore, awayScore, status, homeTeam, awayTeam } = body
 
   const match = await prisma.match.update({
     where: { id },
@@ -22,6 +22,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       ...(status !== undefined && { status }),
       ...(homeScore !== undefined && { homeScore: parseInt(homeScore) }),
       ...(awayScore !== undefined && { awayScore: parseInt(awayScore) }),
+      ...(homeTeam !== undefined && { homeTeam: homeTeam.trim() }),
+      ...(awayTeam !== undefined && { awayTeam: awayTeam.trim() }),
     },
   })
 

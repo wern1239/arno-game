@@ -3,6 +3,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import useSWR, { mutate } from 'swr'
+import { TeamCombobox } from '@/app/components/TeamCombobox'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -40,6 +41,8 @@ export default function AdminMatchesPage() {
   const [adding, setAdding] = useState(false)
 
   const [resultModal, setResultModal] = useState<Match | null>(null)
+  const [resultHomeTeam, setResultHomeTeam] = useState('')
+  const [resultAwayTeam, setResultAwayTeam] = useState('')
   const [resultHome, setResultHome] = useState('')
   const [resultAway, setResultAway] = useState('')
   const [resultStatus, setResultStatus] = useState<string>('FINISHED')
@@ -87,6 +90,8 @@ export default function AdminMatchesPage() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        homeTeam: resultHomeTeam,
+        awayTeam: resultAwayTeam,
         status: resultStatus,
         homeScore: resultStatus === 'UPCOMING' ? undefined : parseInt(resultHome),
         awayScore: resultStatus === 'UPCOMING' ? undefined : parseInt(resultAway),
@@ -100,6 +105,8 @@ export default function AdminMatchesPage() {
 
   function openResult(match: Match) {
     setResultModal(match)
+    setResultHomeTeam(match.homeTeam)
+    setResultAwayTeam(match.awayTeam)
     setResultHome(match.homeScore !== null ? String(match.homeScore) : '')
     setResultAway(match.awayScore !== null ? String(match.awayScore) : '')
     setResultStatus(match.status)
@@ -124,21 +131,19 @@ export default function AdminMatchesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-400 mb-1 block">ทีมเหย้า</label>
-              <input
+              <TeamCombobox
                 value={form.homeTeam}
-                onChange={(e) => setForm({ ...form, homeTeam: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500"
-                placeholder="เช่น Manchester United"
+                onChange={(v) => setForm({ ...form, homeTeam: v })}
+                placeholder="ค้นหาทีม..."
                 required
               />
             </div>
             <div>
               <label className="text-xs text-gray-400 mb-1 block">ทีมเยือน</label>
-              <input
+              <TeamCombobox
                 value={form.awayTeam}
-                onChange={(e) => setForm({ ...form, awayTeam: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500"
-                placeholder="เช่น Arsenal"
+                onChange={(v) => setForm({ ...form, awayTeam: v })}
+                placeholder="ค้นหาทีม..."
                 required
               />
             </div>
@@ -229,8 +234,18 @@ export default function AdminMatchesPage() {
       {resultModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
           <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="font-bold text-lg mb-1">อัปเดตแมตช์</h3>
-            <p className="text-gray-400 text-sm mb-5">{resultModal.homeTeam} vs {resultModal.awayTeam}</p>
+            <h3 className="font-bold text-lg mb-4">อัปเดตแมตช์</h3>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">ทีมเหย้า</label>
+                <TeamCombobox value={resultHomeTeam} onChange={setResultHomeTeam} />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">ทีมเยือน</label>
+                <TeamCombobox value={resultAwayTeam} onChange={setResultAwayTeam} />
+              </div>
+            </div>
 
             <div className="mb-4">
               <label className="text-xs text-gray-400 mb-1 block">สถานะ</label>

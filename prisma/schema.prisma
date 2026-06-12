@@ -40,6 +40,13 @@ enum MatchStatus {
   FINISHED
 }
 
+model Announcement {
+  id        String   @id @default(cuid())
+  content   String
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
 model Prediction {
   id        String   @id @default(cuid())
   userId    String

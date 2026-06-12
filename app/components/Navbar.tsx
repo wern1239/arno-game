@@ -29,6 +29,7 @@ export function Navbar() {
         <div className="hidden sm:flex gap-2 items-center text-sm">
           <Link href="/" className={linkClass('/')}>แมตช์</Link>
           <Link href="/leaderboard" className={linkClass('/leaderboard')}>อันดับ</Link>
+          <Link href="/archive" className={linkClass('/archive')}>ประกาศเก่า</Link>
           {session ? (
             <>
               {session.user.role === 'ADMIN' && (
@@ -75,6 +76,7 @@ export function Navbar() {
         <div className="sm:hidden border-t border-green-700 px-4 py-3 flex flex-col gap-1">
           <Link href="/" onClick={() => setOpen(false)} className={linkClass('/')}>แมตช์</Link>
           <Link href="/leaderboard" onClick={() => setOpen(false)} className={linkClass('/leaderboard')}>อันดับ</Link>
+          <Link href="/archive" onClick={() => setOpen(false)} className={linkClass('/archive')}>ประกาศเก่า</Link>
           {session ? (
             <>
               {session.user.role === 'ADMIN' && (

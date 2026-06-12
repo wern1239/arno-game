@@ -1,11 +1,17 @@
 'use client'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
+
+type Announcement = {
+  id: string
+  content: string
+  createdAt: string
+}
 
 type Prediction = {
   matchId: string
@@ -24,9 +30,15 @@ type Prediction = {
 export default function AdminPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const [newAnnouncement, setNewAnnouncement] = useState('')
+  const [posting, setPosting] = useState(false)
 
   const { data: predictions } = useSWR<Prediction[]>(
     session ? '/api/admin/my-predictions' : null,
+    fetcher
+  )
+  const { data: announcements, mutate: mutateAnnouncements } = useSWR<Announcement[]>(
+    session ? '/api/announcements' : null,
     fetcher
   )
 
@@ -34,6 +46,29 @@ export default function AdminPage() {
     if (status === 'loading') return
     if (!session || session.user.role !== 'ADMIN') router.push('/')
   }, [session, status, router])
+
+  async function postAnnouncement() {
+    if (!newAnnouncement.trim()) return
+    setPosting(true)
+    await fetch('/api/admin/announcements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: newAnnouncement }),
+    })
+    setNewAnnouncement('')
+    mutateAnnouncements()
+    setPosting(false)
+  }
+
+  async function archiveAnnouncement(id: string) {
+    await fetch(`/api/admin/announcements/${id}`, { method: 'PATCH' })
+    mutateAnnouncements()
+  }
+
+  async function deleteAnnouncement(id: string) {
+    await fetch(`/api/admin/announcements/${id}`, { method: 'DELETE' })
+    mutateAnnouncements()
+  }
 
   if (status === 'loading') return null
 
@@ -72,6 +107,53 @@ export default function AdminPage() {
           <h2 className="text-lg font-bold mb-1">ดูตารางคะแนน</h2>
           <p className="text-gray-500 text-sm">ดูอันดับคะแนนของผู้เล่นทั้งหมด</p>
         </Link>
+      </div>
+
+      {/* Announcements */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+        <h2 className="font-bold text-gray-300 mb-4">📢 ประกาศ</h2>
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            value={newAnnouncement}
+            onChange={(e) => setNewAnnouncement(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && postAnnouncement()}
+            placeholder="พิมพ์ข้อความประกาศ..."
+            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-yellow-600"
+          />
+          <button
+            onClick={postAnnouncement}
+            disabled={posting || !newAnnouncement.trim()}
+            className="bg-yellow-600 hover:bg-yellow-500 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg font-semibold transition-colors"
+          >
+            ประกาศ
+          </button>
+        </div>
+        {!announcements?.length ? (
+          <p className="text-gray-600 text-sm">ยังไม่มีประกาศ</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {announcements.map((a) => (
+              <div key={a.id} className="flex items-start gap-3 bg-gray-800 rounded-lg px-4 py-3">
+                <p className="flex-1 text-sm text-yellow-100 leading-relaxed">{a.content}</p>
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => archiveAnnouncement(a.id)}
+                    className="text-gray-500 hover:text-blue-400 transition-colors text-xs"
+                  >
+                    เก็บถาวร
+                  </button>
+                  <button
+                    onClick={() => deleteAnnouncement(a.id)}
+                    className="text-gray-500 hover:text-red-400 transition-colors text-xs"
+                  >
+                    ลบ
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Admin's own score */}

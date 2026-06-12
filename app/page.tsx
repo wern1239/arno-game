@@ -2,8 +2,17 @@
 import useSWR from 'swr'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { useState } from 'react'
+import { getFlagCode } from '@/lib/flags'
+import { FlagImg } from '@/app/components/FlagImg'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
+
+type Announcement = {
+  id: string
+  content: string
+  createdAt: string
+}
 
 type Match = {
   id: string
@@ -54,7 +63,10 @@ function MatchCard({ match, prediction }: { match: Match; prediction?: Predictio
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        <span className="flex-1 text-right font-semibold text-sm sm:text-base leading-tight">{match.homeTeam}</span>
+        <div className="flex-1 flex items-center justify-end gap-2">
+          <span className="font-semibold text-sm sm:text-base leading-tight text-right">{match.homeTeam}</span>
+          <FlagImg code={getFlagCode(match.homeTeam)} />
+        </div>
         <div className="text-center shrink-0 min-w-[64px]">
           {match.status !== 'UPCOMING' && match.homeScore !== null ? (
             <span className="text-xl font-bold">{match.homeScore} - {match.awayScore}</span>
@@ -62,7 +74,10 @@ function MatchCard({ match, prediction }: { match: Match; prediction?: Predictio
             <span className="text-gray-500 font-bold">vs</span>
           )}
         </div>
-        <span className="flex-1 font-semibold text-sm sm:text-base leading-tight">{match.awayTeam}</span>
+        <div className="flex-1 flex items-center gap-2">
+          <FlagImg code={getFlagCode(match.awayTeam)} />
+          <span className="font-semibold text-sm sm:text-base leading-tight">{match.awayTeam}</span>
+        </div>
       </div>
 
       <div className="mt-3 flex items-center justify-between text-sm">
@@ -93,10 +108,14 @@ function MatchCard({ match, prediction }: { match: Match; prediction?: Predictio
   )
 }
 
+type Filter = 'all' | 'finished' | 'upcoming' | 'pending'
+
 export default function HomePage() {
   const { data: session } = useSession()
   const { data: matches, isLoading } = useSWR<Match[]>('/api/matches', fetcher, { refreshInterval: 30000 })
   const { data: predictions } = useSWR<Prediction[]>(session ? '/api/predictions' : null, fetcher, { refreshInterval: 30000 })
+  const { data: announcements } = useSWR<Announcement[]>('/api/announcements', fetcher, { refreshInterval: 60000 })
+  const [filter, setFilter] = useState<Filter>('all')
 
   if (isLoading) {
     return (
@@ -117,10 +136,28 @@ export default function HomePage() {
   }
 
   const predMap = new Map(predictions?.map((p) => [p.matchId, p]) ?? [])
-  const weeks = [...new Set(matches.map((m) => m.weekNumber))].sort((a, b) => a - b)
+
+  const filteredMatches = (matches ?? []).filter((m) => {
+    const canPredict = m.status === 'UPCOMING' && new Date() < new Date(m.matchDate)
+    if (filter === 'finished') return m.status === 'FINISHED'
+    if (filter === 'upcoming') return m.status === 'UPCOMING' || m.status === 'LIVE'
+    if (filter === 'pending') return canPredict && !predMap.has(m.id)
+    return true
+  })
+  const weeks = [...new Set(filteredMatches.map((m) => m.weekNumber))].sort((a, b) => a - b)
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
+      {!!announcements?.length && (
+        <div className="mb-6 flex flex-col gap-2">
+          {announcements.map((a) => (
+            <div key={a.id} className="bg-yellow-900/30 border border-yellow-700/50 rounded-xl px-4 py-3 flex gap-3 items-start">
+              <span className="text-yellow-400 text-lg shrink-0">📢</span>
+              <p className="text-yellow-100 text-sm leading-relaxed">{a.content}</p>
+            </div>
+          ))}
+        </div>
+      )}
       {!session && (
         <div className="bg-green-900/30 border border-green-800 rounded-xl p-4 mb-6 text-center text-sm">
           <Link href="/login" className="text-green-400 font-bold underline">เข้าสู่ระบบ</Link>
@@ -129,13 +166,38 @@ export default function HomePage() {
           {' '}เพื่อทายผล
         </div>
       )}
-      {weeks.map((week) => (
+
+      {/* Filter tabs */}
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {([
+          { key: 'all', label: 'ทั้งหมด' },
+          { key: 'upcoming', label: 'ยังไม่ถึง' },
+          { key: 'finished', label: 'ผ่านมาแล้ว' },
+          ...(session ? [{ key: 'pending', label: 'รอการทาย' }] : []),
+        ] as { key: Filter; label: string }[]).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setFilter(key)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              filter === key
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {weeks.length === 0 ? (
+        <div className="text-center py-12 text-gray-600">ไม่มีแมตช์ในหมวดนี้</div>
+      ) : weeks.map((week) => (
         <div key={week} className="mb-8">
           <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
             นัดที่ {week}
           </h2>
           <div className="flex flex-col gap-3">
-            {matches.filter((m) => m.weekNumber === week).map((match) => (
+            {filteredMatches.filter((m) => m.weekNumber === week).map((match) => (
               <MatchCard key={match.id} match={match} prediction={predMap.get(match.id)} />
             ))}
           </div>
