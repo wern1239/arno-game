@@ -15,12 +15,28 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   const { id } = await params
   const body = await req.json()
 
-  if ('displayName' in body) {
-    const displayName = body.displayName?.trim()
-    if (!displayName) {
-      return NextResponse.json({ error: 'กรุณากรอกชื่อ' }, { status: 400 })
+  if ('displayName' in body || 'username' in body) {
+    const data: { displayName?: string; username?: string } = {}
+
+    if ('displayName' in body) {
+      const displayName = body.displayName?.trim()
+      if (!displayName) return NextResponse.json({ error: 'กรุณากรอกชื่อที่แสดง' }, { status: 400 })
+      data.displayName = displayName
     }
-    await prisma.user.update({ where: { id }, data: { displayName } })
+
+    if ('username' in body) {
+      const username = body.username?.trim()
+      if (!username || username.length < 3) {
+        return NextResponse.json({ error: 'ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร' }, { status: 400 })
+      }
+      const existing = await prisma.user.findUnique({ where: { username } })
+      if (existing && existing.id !== id) {
+        return NextResponse.json({ error: 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว' }, { status: 400 })
+      }
+      data.username = username
+    }
+
+    await prisma.user.update({ where: { id }, data })
     return NextResponse.json({ success: true })
   }
 

@@ -31,6 +31,7 @@ export default function AdminUsersPage() {
 
   const [renameModal, setRenameModal] = useState<User | null>(null)
   const [newDisplayName, setNewDisplayName] = useState('')
+  const [newUsername, setNewUsername] = useState('')
   const [renameError, setRenameError] = useState('')
   const [renaming, setRenaming] = useState(false)
   const [renameSuccess, setRenameSuccess] = useState(false)
@@ -78,7 +79,7 @@ export default function AdminUsersPage() {
     const res = await fetch(`/api/admin/users/${renameModal.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ displayName: newDisplayName }),
+      body: JSON.stringify({ displayName: newDisplayName, username: newUsername }),
     })
     const data = await res.json()
     setRenaming(false)
@@ -219,7 +220,7 @@ export default function AdminUsersPage() {
               </div>
               <div className="flex gap-2 shrink-0">
                 <button
-                  onClick={() => { setRenameModal(user); setNewDisplayName(user.displayName); setRenameError('') }}
+                  onClick={() => { setRenameModal(user); setNewDisplayName(user.displayName); setNewUsername(user.username); setRenameError('') }}
                   className="text-xs bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg transition-colors"
                 >
                   เปลี่ยนชื่อ
@@ -262,7 +263,7 @@ export default function AdminUsersPage() {
                   <div className="bg-red-900/40 border border-red-700 text-red-300 text-sm px-4 py-2 rounded-lg">{renameError}</div>
                 )}
                 <div>
-                  <label className="text-xs text-gray-400 mb-1 block">ชื่อที่แสดง</label>
+                  <label className="text-xs text-gray-400 mb-1 block">ชื่อที่แสดง (leaderboard)</label>
                   <input
                     type="text"
                     value={newDisplayName}
@@ -270,6 +271,17 @@ export default function AdminUsersPage() {
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-green-500"
                     autoFocus
                     required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">ชื่อผู้ใช้ (สำหรับ login)</label>
+                  <input
+                    type="text"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-green-500"
+                    required
+                    minLength={3}
                   />
                 </div>
                 <div className="flex gap-2">
