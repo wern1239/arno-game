@@ -29,6 +29,12 @@ export default function AdminUsersPage() {
   const [resetting, setResetting] = useState(false)
   const [resetSuccess, setResetSuccess] = useState(false)
 
+  const [renameModal, setRenameModal] = useState<User | null>(null)
+  const [newDisplayName, setNewDisplayName] = useState('')
+  const [renameError, setRenameError] = useState('')
+  const [renaming, setRenaming] = useState(false)
+  const [renameSuccess, setRenameSuccess] = useState(false)
+
   const { data: users, isLoading } = useSWR<User[]>('/api/admin/users', fetcher)
 
   useEffect(() => {
@@ -61,6 +67,33 @@ export default function AdminUsersPage() {
     if (!confirm(`ลบบัญชี "${user.username}"?\nการทายทั้งหมดจะถูกลบด้วย`)) return
     await fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' })
     mutate('/api/admin/users')
+  }
+
+  async function handleRename(e: React.FormEvent) {
+    e.preventDefault()
+    if (!renameModal) return
+    setRenameError('')
+    setRenaming(true)
+
+    const res = await fetch(`/api/admin/users/${renameModal.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: newDisplayName }),
+    })
+    const data = await res.json()
+    setRenaming(false)
+
+    if (!res.ok) {
+      setRenameError(data.error)
+    } else {
+      setRenameSuccess(true)
+      setTimeout(() => {
+        setRenameModal(null)
+        setRenameSuccess(false)
+        setNewDisplayName('')
+        mutate('/api/admin/users')
+      }, 1000)
+    }
   }
 
   async function handleReset(e: React.FormEvent) {
@@ -186,6 +219,12 @@ export default function AdminUsersPage() {
               </div>
               <div className="flex gap-2 shrink-0">
                 <button
+                  onClick={() => { setRenameModal(user); setNewDisplayName(user.displayName); setRenameError('') }}
+                  className="text-xs bg-gray-600 hover:bg-gray-500 text-white px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  เปลี่ยนชื่อ
+                </button>
+                <button
                   onClick={() => { setResetModal(user); setNewPassword(''); setResetError('') }}
                   className="text-xs bg-blue-700 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg transition-colors"
                 >
@@ -202,6 +241,56 @@ export default function AdminUsersPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Rename Modal */}
+      {renameModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-sm">
+            <h3 className="font-bold text-lg mb-1">เปลี่ยนชื่อผู้ใช้</h3>
+            <p className="text-gray-400 text-sm mb-5">บัญชี: <span className="text-white font-semibold">{renameModal.username}</span></p>
+
+            {renameSuccess ? (
+              <div className="text-center text-green-400 py-4">
+                <div className="text-3xl mb-2">✓</div>
+                <p className="font-semibold">เปลี่ยนชื่อแล้ว</p>
+              </div>
+            ) : (
+              <form onSubmit={handleRename} className="flex flex-col gap-4">
+                {renameError && (
+                  <div className="bg-red-900/40 border border-red-700 text-red-300 text-sm px-4 py-2 rounded-lg">{renameError}</div>
+                )}
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">ชื่อที่แสดง</label>
+                  <input
+                    type="text"
+                    value={newDisplayName}
+                    onChange={(e) => setNewDisplayName(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-green-500"
+                    autoFocus
+                    required
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRenameModal(null)}
+                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm transition-colors"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={renaming}
+                    className="flex-1 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 text-white py-2 rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    {renaming ? 'กำลังบันทึก...' : 'บันทึก'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       )}
 

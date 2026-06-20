@@ -13,8 +13,18 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   const { id } = await params
-  const { password } = await req.json()
+  const body = await req.json()
 
+  if ('displayName' in body) {
+    const displayName = body.displayName?.trim()
+    if (!displayName) {
+      return NextResponse.json({ error: 'กรุณากรอกชื่อ' }, { status: 400 })
+    }
+    await prisma.user.update({ where: { id }, data: { displayName } })
+    return NextResponse.json({ success: true })
+  }
+
+  const { password } = body
   if (!password || password.length < 6) {
     return NextResponse.json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' }, { status: 400 })
   }
