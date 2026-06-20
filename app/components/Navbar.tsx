@@ -43,7 +43,11 @@ export function Navbar() {
                   ADMIN
                 </Link>
               )}
-              <span className="text-green-300 px-2 text-sm">👤 {session.user.name}</span>
+              <Link href="/profile" className="flex items-center gap-1.5 text-green-300 hover:text-white px-2 py-1 rounded-lg hover:bg-green-700 transition-colors text-sm group">
+                <span>👤</span>
+                <span className="group-hover:underline">{session.user.name}</span>
+                <span className="text-green-500 group-hover:text-green-300 text-xs">🔑</span>
+              </Link>
               <button onClick={() => signOut()} className="bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded transition-colors text-sm">
                 ออก
               </button>
@@ -96,6 +100,9 @@ export function Navbar() {
                   ⚙️ Admin Panel
                 </Link>
               )}
+              <Link href="/profile" onClick={() => setOpen(false)} className={linkClass('/profile')}>
+                👤 แก้ไขโปรไฟล์
+              </Link>
               <button
                 onClick={() => { signOut(); setOpen(false) }}
                 className="text-left px-3 py-2 text-red-400 hover:bg-green-700 rounded-lg text-sm"
