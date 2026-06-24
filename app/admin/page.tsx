@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
+import { TeamCombobox } from '@/app/components/TeamCombobox'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -19,6 +20,16 @@ type Sponsor = {
   prize: string
 }
 
+type SpecialQuestion = {
+  id: string
+  type: 'FINAL_PAIR' | 'PODIUM'
+  isOpen: boolean
+  deadline: string | null
+  result1: string | null
+  result2: string | null
+  result3: string | null
+}
+
 type Prediction = {
   matchId: string
   homeScore: number
@@ -31,6 +42,130 @@ type Prediction = {
     homeScore: number | null
     awayScore: number | null
   }
+}
+
+type SpecialQuestionAdminProps = {
+  q: SpecialQuestion
+  onUpdate: (body: object) => Promise<void>
+  onScore: () => Promise<void>
+}
+
+function SpecialQuestionAdmin({ q, onUpdate, onScore }: SpecialQuestionAdminProps) {
+  const [deadline, setDeadline] = useState(
+    q.deadline ? new Date(q.deadline).toISOString().slice(0, 16) : ''
+  )
+  const [r1, setR1] = useState(q.result1 ?? '')
+  const [r2, setR2] = useState(q.result2 ?? '')
+  const [r3, setR3] = useState(q.result3 ?? '')
+  const [deadlineSaved, setDeadlineSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'done' | 'error'>('idle')
+
+  const label = q.type === 'FINAL_PAIR' ? '⚔️ ทายคู่นัดชิง' : '🏆 ทายอันดับ 1/2/3'
+  const canSaveAndScore = q.type === 'FINAL_PAIR' ? !!r1 && !!r2 : !!r1 && !!r2 && !!r3
+
+  async function saveDeadline() {
+    await onUpdate({ deadline: deadline || null })
+    setDeadlineSaved(true)
+    setTimeout(() => setDeadlineSaved(false), 2000)
+  }
+
+  async function saveAndScore() {
+    setSaving(true)
+    setSaveStatus('idle')
+    try {
+      await onUpdate({ result1: r1 || null, result2: r2 || null, result3: r3 || null })
+      await onScore()
+      setSaveStatus('done')
+    } catch {
+      setSaveStatus('error')
+    } finally {
+      setSaving(false)
+      setTimeout(() => setSaveStatus('idle'), 3000)
+    }
+  }
+
+  return (
+    <div className="border border-gray-700 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="font-semibold text-sm text-white">{label}</span>
+        <button
+          onClick={() => onUpdate({ isOpen: !q.isOpen })}
+          className={`text-xs px-3 py-1 rounded font-bold transition-colors ${
+            q.isOpen
+              ? 'bg-green-700 hover:bg-green-600 text-white'
+              : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+          }`}
+        >
+          {q.isOpen ? 'เปิดรับอยู่' : 'ปิดรับอยู่'}
+        </button>
+      </div>
+
+      <div className="flex gap-2 mb-3 items-end">
+        <div className="flex-1">
+          <label className="text-xs text-gray-500 mb-1 block">Deadline</label>
+          <input
+            type="datetime-local"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-yellow-600"
+          />
+        </div>
+        <button
+          onClick={saveDeadline}
+          className="bg-yellow-700 hover:bg-yellow-600 text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors min-w-[72px]"
+        >
+          {deadlineSaved ? '✓ บันทึก' : 'บันทึก'}
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-2 mb-3">
+        <label className="text-xs text-gray-500">ผลจริง (กรอกหลังแข่งเสร็จ)</label>
+        {q.type === 'FINAL_PAIR' ? (
+          <div className="flex flex-col gap-2">
+            <TeamCombobox value={r1} onChange={setR1} placeholder="ทีมชิง 1..." />
+            <TeamCombobox value={r2} onChange={setR2} placeholder="ทีมชิง 2..." />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <TeamCombobox value={r1} onChange={setR1} placeholder="🥇 แชมป์..." />
+            <TeamCombobox value={r2} onChange={setR2} placeholder="🥈 รองแชมป์..." />
+            <TeamCombobox value={r3} onChange={setR3} placeholder="🥉 อันดับ 3..." />
+          </div>
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          onClick={saveAndScore}
+          disabled={saving || !canSaveAndScore}
+          className={`flex-1 text-white text-sm font-semibold py-2 rounded-lg transition-colors disabled:opacity-40 ${
+            saveStatus === 'done' ? 'bg-green-700' :
+            saveStatus === 'error' ? 'bg-red-700' :
+            'bg-purple-700 hover:bg-purple-600'
+          }`}
+        >
+          {saving ? 'กำลังบันทึกและคำนวณ...' :
+           saveStatus === 'done' ? '✓ บันทึกและคำนวณคะแนนแล้ว' :
+           saveStatus === 'error' ? '✕ เกิดข้อผิดพลาด' :
+           'บันทึกผลและคำนวณคะแนน'}
+        </button>
+        {(q.result1) && (
+          <button
+            onClick={() => {
+              if (!confirm('เคลียร์ผลและรีเซทคะแนนทุกคนในคำถามนี้?')) return
+              setR1(''); setR2(''); setR3('')
+              onUpdate({ result1: null, result2: null, result3: null })
+            }}
+            disabled={saving}
+            className="px-3 py-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-900/30 border border-red-800/50 rounded-lg transition-colors disabled:opacity-40"
+          >
+            เคลียร์ผล
+          </button>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default function AdminPage() {
@@ -52,6 +187,10 @@ export default function AdminPage() {
   )
   const { data: sponsors, mutate: mutateSponsors } = useSWR<Sponsor[]>(
     session ? '/api/sponsors' : null,
+    fetcher
+  )
+  const { data: specialQuestions, mutate: mutateSpecial } = useSWR<SpecialQuestion[]>(
+    session ? '/api/special-questions' : null,
     fetcher
   )
 
@@ -100,6 +239,20 @@ export default function AdminPage() {
   async function deleteSponsor(id: string) {
     await fetch(`/api/admin/sponsors/${id}`, { method: 'DELETE' })
     mutateSponsors()
+  }
+
+  async function updateSpecial(id: string, body: object) {
+    await fetch(`/api/admin/special-questions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    mutateSpecial()
+  }
+
+  async function scoreSpecial(id: string) {
+    await fetch(`/api/admin/special-questions/${id}/score`, { method: 'POST' })
+    mutateSpecial()
   }
 
   if (status === 'loading') return null
@@ -234,6 +387,25 @@ export default function AdminPage() {
                   ลบ
                 </button>
               </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Special Questions */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6">
+        <h2 className="font-bold text-gray-300 mb-4">⭐ คำถามพิเศษ</h2>
+        {!specialQuestions?.length ? (
+          <p className="text-gray-600 text-sm">กำลังโหลด...</p>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {specialQuestions.map((q) => (
+              <SpecialQuestionAdmin
+                key={q.id}
+                q={q}
+                onUpdate={(body) => updateSpecial(q.id, body)}
+                onScore={() => scoreSpecial(q.id)}
+              />
             ))}
           </div>
         )}

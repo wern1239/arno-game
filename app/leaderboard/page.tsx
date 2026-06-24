@@ -14,20 +14,46 @@ type HistoryItem = {
   points: number
 }
 
+type SpecialHistoryItem = {
+  type: 'FINAL_PAIR' | 'PODIUM'
+  answer1: string
+  answer2?: string | null
+  answer3?: string | null
+  points: number
+  result1?: string | null
+  result2?: string | null
+  result3?: string | null
+}
+
 type Entry = {
   id: string
   username: string
   displayName: string
   totalPoints: number
+  matchPoints: number
+  specialPoints: number
   totalPredictions: number
   correct: number
   exact: number
   history: HistoryItem[]
+  specialHistory: SpecialHistoryItem[]
 }
 
 const medals = ['🥇', '🥈', '🥉']
 
-function HistoryPanel({ history, onClose }: { history: HistoryItem[]; onClose: () => void }) {
+function HistoryPanel({
+  history,
+  specialHistory,
+  matchPoints,
+  specialPoints,
+  onClose,
+}: {
+  history: HistoryItem[]
+  specialHistory: SpecialHistoryItem[]
+  matchPoints: number
+  specialPoints: number
+  onClose: () => void
+}) {
   return (
     <div className="mt-2 bg-gray-800 border border-gray-600 rounded-xl shadow-xl overflow-hidden">
       <div className="flex items-center justify-between px-3 pt-3 pb-2">
@@ -37,29 +63,58 @@ function HistoryPanel({ history, onClose }: { history: HistoryItem[]; onClose: (
         </button>
       </div>
 
+      {specialHistory.length > 0 && (
+        <div className="px-3 pb-2">
+          <p className="text-xs text-purple-400 font-semibold mb-1.5">⭐ คำถามพิเศษ (+{specialPoints})</p>
+          <div className="flex flex-col gap-1.5">
+            {specialHistory.map((s, i) => (
+              <div key={i} className="flex items-center justify-between text-xs bg-gray-900 rounded-lg px-3 py-2 shrink-0">
+                <div className="flex-1 min-w-0">
+                  {s.type === 'FINAL_PAIR' ? (
+                    <div className="text-gray-300">⚔️ {s.answer1} vs {s.answer2}</div>
+                  ) : (
+                    <div className="text-gray-300 flex flex-col gap-0.5">
+                      <span>🥇 {s.answer1}</span>
+                      {s.answer2 && <span>🥈 {s.answer2}</span>}
+                      {s.answer3 && <span>🥉 {s.answer3}</span>}
+                    </div>
+                  )}
+                </div>
+                <span className={`ml-3 font-bold text-sm shrink-0 ${s.points > 0 ? 'text-green-400' : 'text-gray-600'}`}>
+                  {s.points > 0 ? `+${s.points}` : s.result1 ? '0' : '?'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {!history.length ? (
         <p className="text-gray-500 text-xs text-center pb-3">ยังไม่มีแมตช์ที่จบแล้ว</p>
       ) : (
-        <div className="flex flex-col gap-1.5 max-h-48 overflow-y-scroll px-3 pb-3 scrollbar-thin">
-          {history.map((h, i) => (
-            <div key={i} className="flex items-center justify-between text-xs bg-gray-900 rounded-lg px-3 py-2 shrink-0">
-              <div className="flex-1 min-w-0">
-                <div className="text-gray-300 truncate">{h.homeTeam} vs {h.awayTeam}</div>
-                <div className="text-gray-500 mt-0.5">
-                  ทาย <span className="text-white">{h.predictedHome}–{h.predictedAway}</span>
-                  {' · '}ผล <span className="text-white">{h.actualHome}–{h.actualAway}</span>
+        <>
+          <p className="text-xs text-gray-400 font-semibold px-3 pb-1.5">นัดปกติ (+{matchPoints})</p>
+          <div className="flex flex-col gap-1.5 max-h-48 overflow-y-scroll px-3 pb-3 scrollbar-thin">
+            {history.map((h, i) => (
+              <div key={i} className="flex items-center justify-between text-xs bg-gray-900 rounded-lg px-3 py-2 shrink-0">
+                <div className="flex-1 min-w-0">
+                  <div className="text-gray-300 truncate">{h.homeTeam} vs {h.awayTeam}</div>
+                  <div className="text-gray-500 mt-0.5">
+                    ทาย <span className="text-white">{h.predictedHome}–{h.predictedAway}</span>
+                    {' · '}ผล <span className="text-white">{h.actualHome}–{h.actualAway}</span>
+                  </div>
                 </div>
+                <span className={`ml-3 font-bold text-sm shrink-0 ${
+                  h.points === 3 ? 'text-yellow-400' :
+                  h.points === 1 ? 'text-green-400' :
+                  'text-red-400'
+                }`}>
+                  {h.points > 0 ? `+${h.points}` : '0'}
+                </span>
               </div>
-              <span className={`ml-3 font-bold text-sm shrink-0 ${
-                h.points === 3 ? 'text-yellow-400' :
-                h.points === 1 ? 'text-green-400' :
-                'text-red-400'
-              }`}>
-                {h.points > 0 ? `+${h.points}` : '0'}
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
@@ -127,6 +182,9 @@ export default function LeaderboardPage() {
               {openId === entry.id && (
                 <HistoryPanel
                   history={entry.history}
+                  specialHistory={entry.specialHistory ?? []}
+                  matchPoints={entry.matchPoints ?? entry.totalPoints}
+                  specialPoints={entry.specialPoints ?? 0}
                   onClose={() => setOpenId(null)}
                 />
               )}

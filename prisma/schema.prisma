@@ -7,13 +7,14 @@ datasource db {
 }
 
 model User {
-  id          String       @id @default(cuid())
-  username    String       @unique
-  password    String
-  displayName String       @default("")
-  role        Role         @default(USER)
-  createdAt   DateTime     @default(now())
-  predictions Prediction[]
+  id                 String              @id @default(cuid())
+  username           String              @unique
+  password           String
+  displayName        String              @default("")
+  role               Role                @default(USER)
+  createdAt          DateTime            @default(now())
+  predictions        Prediction[]
+  specialPredictions SpecialPrediction[]
 }
 
 enum Role {
@@ -53,6 +54,37 @@ model Sponsor {
   prize     String
   archived  Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+enum SpecialQuestionType {
+  FINAL_PAIR
+  PODIUM
+}
+
+model SpecialQuestion {
+  id          String              @id @default(cuid())
+  type        SpecialQuestionType @unique
+  isOpen      Boolean             @default(false)
+  deadline    DateTime?
+  result1     String?
+  result2     String?
+  result3     String?
+  predictions SpecialPrediction[]
+}
+
+model SpecialPrediction {
+  id         String          @id @default(cuid())
+  userId     String
+  questionId String
+  answer1    String
+  answer2    String?
+  answer3    String?
+  points     Int             @default(0)
+  createdAt  DateTime        @default(now())
+  user       User            @relation(fields: [userId], references: [id])
+  question   SpecialQuestion @relation(fields: [questionId], references: [id])
+
+  @@unique([userId, questionId])
 }
 
 model Prediction {

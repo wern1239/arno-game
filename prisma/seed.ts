@@ -9,17 +9,28 @@ const prisma = new PrismaClient({ adapter } as any)
 
 async function main() {
   const existing = await prisma.user.findUnique({ where: { username: 'admin' } })
-  if (existing) {
+  if (!existing) {
+    const hashed = await bcrypt.hash('admin123', 10)
+    await prisma.user.create({
+      data: { username: 'admin', password: hashed, role: 'ADMIN' },
+    })
+    console.log('Created admin user: admin / admin123')
+    console.log('⚠️  เปลี่ยนรหัสผ่านหลัง deploy ด้วยนะ!')
+  } else {
     console.log('Admin already exists')
-    return
   }
 
-  const hashed = await bcrypt.hash('admin123', 10)
-  await prisma.user.create({
-    data: { username: 'admin', password: hashed, role: 'ADMIN' },
+  await prisma.specialQuestion.upsert({
+    where: { type: 'FINAL_PAIR' },
+    update: {},
+    create: { type: 'FINAL_PAIR' },
   })
-  console.log('Created admin user: admin / admin123')
-  console.log('⚠️  เปลี่ยนรหัสผ่านหลัง deploy ด้วยนะ!')
+  await prisma.specialQuestion.upsert({
+    where: { type: 'PODIUM' },
+    update: {},
+    create: { type: 'PODIUM' },
+  })
+  console.log('Special questions seeded')
 }
 
 main()
