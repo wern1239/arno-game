@@ -51,9 +51,12 @@ type SpecialQuestionAdminProps = {
 }
 
 function SpecialQuestionAdmin({ q, onUpdate, onScore }: SpecialQuestionAdminProps) {
-  const [deadline, setDeadline] = useState(
-    q.deadline ? new Date(q.deadline).toISOString().slice(0, 16) : ''
-  )
+  const [deadline, setDeadline] = useState(() => {
+    if (!q.deadline) return ''
+    const d = new Date(q.deadline)
+    // convert UTC → local time for datetime-local input
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+  })
   const [r1, setR1] = useState(q.result1 ?? '')
   const [r2, setR2] = useState(q.result2 ?? '')
   const [r3, setR3] = useState(q.result3 ?? '')
@@ -65,7 +68,8 @@ function SpecialQuestionAdmin({ q, onUpdate, onScore }: SpecialQuestionAdminProp
   const canSaveAndScore = q.type === 'FINAL_PAIR' ? !!r1 && !!r2 : !!r1 && !!r2 && !!r3
 
   async function saveDeadline() {
-    await onUpdate({ deadline: deadline || null })
+    // new Date(deadline) in browser treats datetime-local string as local time → correct UTC
+    await onUpdate({ deadline: deadline ? new Date(deadline).toISOString() : null })
     setDeadlineSaved(true)
     setTimeout(() => setDeadlineSaved(false), 2000)
   }
