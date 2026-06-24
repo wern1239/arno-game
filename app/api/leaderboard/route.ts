@@ -5,6 +5,10 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const week = searchParams.get('week')
 
+  const specialQuery = prisma.specialPrediction.findMany({
+    include: { question: { select: { type: true, result1: true, result2: true, result3: true } } },
+  })
+
   const [users, specialPredictions] = await Promise.all([
     prisma.user.findMany({
       where: { role: 'USER' },
@@ -28,11 +32,7 @@ export async function GET(req: NextRequest) {
         },
       },
     }),
-    week
-      ? Promise.resolve([])
-      : prisma.specialPrediction.findMany({
-          include: { question: { select: { type: true, result1: true, result2: true, result3: true } } },
-        }),
+    week ? Promise.resolve([] as Awaited<typeof specialQuery>) : specialQuery,
   ])
 
   const specialByUser = new Map<string, typeof specialPredictions>()
