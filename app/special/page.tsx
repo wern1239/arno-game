@@ -3,6 +3,7 @@ import { useSession } from 'next-auth/react'
 import { useState } from 'react'
 import useSWR from 'swr'
 import { TeamCombobox } from '@/app/components/TeamCombobox'
+import { PlayerCombobox } from '@/app/components/PlayerCombobox'
 import { FlagImg } from '@/app/components/FlagImg'
 import { TEAMS } from '@/lib/flags'
 
@@ -17,7 +18,7 @@ type MyPrediction = {
 
 type Question = {
   id: string
-  type: 'FINAL_PAIR' | 'PODIUM'
+  type: 'FINAL_PAIR' | 'PODIUM' | 'TOP_SCORER'
   isOpen: boolean
   deadline: string | null
   result1: string | null
@@ -269,6 +270,114 @@ function PodiumCard({ q, onSaved }: { q: Question; onSaved: () => void }) {
   )
 }
 
+function TopScorerCard({ q, onSaved }: { q: Question; onSaved: () => void }) {
+  const [a1, setA1] = useState(q.myPrediction?.answer1 ?? '')
+  const [a2, setA2] = useState(q.myPrediction?.answer2 ?? '')
+  const [a3, setA3] = useState(q.myPrediction?.answer3 ?? '')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const isLocked = !q.isOpen || (q.deadline != null && new Date() >= new Date(q.deadline))
+  const hasResult = q.result1 && q.result2 && q.result3
+
+  async function submit() {
+    if (!a1 || !a2 || !a3) return
+    setSaving(true)
+    setError(null)
+    const res = await fetch(`/api/special-questions/${q.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answer1: a1, answer2: a2, answer3: a3 }),
+    })
+    setSaving(false)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(data.error ?? `Error ${res.status}`)
+      return
+    }
+    setSaved(true)
+    onSaved()
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const ranks = [
+    { label: '🥇 อันดับ 1', answer: q.myPrediction?.answer1, result: q.result1, exactPts: 15 },
+    { label: '🥈 อันดับ 2', answer: q.myPrediction?.answer2, result: q.result2, exactPts: 10 },
+    { label: '🥉 อันดับ 3', answer: q.myPrediction?.answer3, result: q.result3, exactPts: 8 },
+  ]
+  const resultSet = hasResult ? new Set([q.result1!, q.result2!, q.result3!]) : null
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="font-bold text-white">⚽ ดาวซัลโว 3 อันดับแรก</h2>
+        <DeadlineBadge deadline={q.deadline} isOpen={q.isOpen} />
+      </div>
+      <p className="text-xs text-gray-500 mb-4">ทายถูกตำแหน่ง: อันดับ 1 +15 · อันดับ 2 +10 · อันดับ 3 +8 | ถูกชื่อผิดตำแหน่ง: +3</p>
+
+      {hasResult && (
+        <div className="bg-gray-800 rounded-lg px-4 py-3 mb-4 flex flex-col gap-1.5">
+          <p className="text-xs text-gray-400 mb-0.5">ผลจริง</p>
+          {ranks.map(({ label, result }) => (
+            <div key={label} className="flex items-center gap-3 text-sm">
+              <span className="text-gray-400 w-24 shrink-0">{label}</span>
+              <span className="text-white font-semibold">{result ?? '-'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {q.myPrediction && (
+        <div className="bg-gray-800 rounded-lg px-4 py-3 mb-4 flex flex-col gap-2">
+          <p className="text-xs text-gray-400 mb-0.5">คำตอบของคุณ</p>
+          {ranks.map(({ label, answer, result, exactPts }) => {
+            const exactCorrect = hasResult && answer === result
+            const partialCorrect = hasResult && !exactCorrect && answer && resultSet?.has(answer)
+            const wrong = hasResult && !exactCorrect && !partialCorrect && answer
+            const earnedPts = exactCorrect ? exactPts : partialCorrect ? 3 : 0
+            return (
+              <div key={label} className="flex items-center justify-between text-sm">
+                <span className="text-gray-400 w-24 shrink-0">{label}</span>
+                <span className={`flex-1 font-semibold ${exactCorrect ? 'text-green-400' : partialCorrect ? 'text-yellow-400' : wrong ? 'text-red-400' : 'text-white'}`}>
+                  {answer || '-'}
+                </span>
+                {hasResult && answer && (
+                  <span className={`font-bold ml-2 ${earnedPts > 0 ? (exactCorrect ? 'text-green-400' : 'text-yellow-400') : 'text-gray-600'}`}>
+                    {earnedPts > 0 ? `+${earnedPts}` : '0'}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+          {hasResult && (
+            <div className="border-t border-gray-700 pt-2 flex justify-between text-sm font-bold">
+              <span className="text-gray-400">รวม</span>
+              <span className="text-green-400">+{q.myPrediction.points}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isLocked && (
+        <div className="flex flex-col gap-2">
+          <PlayerCombobox value={a1} onChange={setA1} placeholder="🥇 อันดับ 1..." exclude={[a2, a3].filter(Boolean)} />
+          <PlayerCombobox value={a2} onChange={setA2} placeholder="🥈 อันดับ 2..." exclude={[a1, a3].filter(Boolean)} />
+          <PlayerCombobox value={a3} onChange={setA3} placeholder="🥉 อันดับ 3..." exclude={[a1, a2].filter(Boolean)} />
+          <button
+            onClick={submit}
+            disabled={saving || !a1 || !a2 || !a3}
+            className="mt-1 bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
+          >
+            {saved ? '✓ บันทึกแล้ว' : saving ? 'กำลังบันทึก...' : q.myPrediction ? 'แก้ไขคำตอบ' : 'ส่งคำตอบ'}
+          </button>
+          {error && <p className="text-red-400 text-xs text-center">{error}</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SpecialPage() {
   const { data: session } = useSession()
   const { data: questions, mutate, isLoading } = useSWR<Question[]>(
@@ -278,6 +387,7 @@ export default function SpecialPage() {
 
   const finalPair = questions?.find((q) => q.type === 'FINAL_PAIR')
   const podium = questions?.find((q) => q.type === 'PODIUM')
+  const topScorer = questions?.find((q) => q.type === 'TOP_SCORER')
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -296,6 +406,7 @@ export default function SpecialPage() {
         <div className="flex flex-col gap-4">
           {finalPair && <FinalPairCard q={finalPair} onSaved={() => mutate()} />}
           {podium && <PodiumCard q={podium} onSaved={() => mutate()} />}
+          {topScorer && <TopScorerCard q={topScorer} onSaved={() => mutate()} />}
         </div>
       )}
 
@@ -307,6 +418,8 @@ export default function SpecialPage() {
           <li>🥇 ทายแชมป์ถูก → <span className="text-white font-semibold">+15</span></li>
           <li>🥈 ทายรองแชมป์ถูก → <span className="text-white font-semibold">+10</span></li>
           <li>🥉 ทายอันดับ 3 ถูก → <span className="text-white font-semibold">+6</span></li>
+          <li className="pt-1 border-t border-gray-800 mt-1">⚽ ทายดาวซัลโวถูกตำแหน่ง: อันดับ 1 <span className="text-white font-semibold">+15</span> · อันดับ 2 <span className="text-white font-semibold">+10</span> · อันดับ 3 <span className="text-white font-semibold">+8</span></li>
+          <li>⚽ ถูกชื่อแต่ผิดตำแหน่ง (ติด top 3) → <span className="text-white font-semibold">+3</span> ต่อคน</li>
         </ul>
       </div>
     </div>

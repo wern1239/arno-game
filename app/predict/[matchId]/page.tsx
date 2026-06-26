@@ -10,11 +10,15 @@ type Match = {
   awayTeam: string
   matchDate: string
   status: 'UPCOMING' | 'LIVE' | 'FINISHED'
+  askExtraTime: boolean
+  askPenalty: boolean
 }
 
 type Prediction = {
   homeScore: number
   awayScore: number
+  extraTime: boolean | null
+  penalty: boolean | null
 }
 
 export default function PredictPage({ params }: { params: Promise<{ matchId: string }> }) {
@@ -26,6 +30,8 @@ export default function PredictPage({ params }: { params: Promise<{ matchId: str
   const [existing, setExisting] = useState<Prediction | null>(null)
   const [homeScore, setHomeScore] = useState('')
   const [awayScore, setAwayScore] = useState('')
+  const [extraTime, setExtraTime] = useState<boolean | null>(null)
+  const [penalty, setPenalty] = useState<boolean | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -52,6 +58,8 @@ export default function PredictPage({ params }: { params: Promise<{ matchId: str
           setExisting(preds[0])
           setHomeScore(String(preds[0].homeScore))
           setAwayScore(String(preds[0].awayScore))
+          setExtraTime(preds[0].extraTime)
+          setPenalty(preds[0].penalty)
         }
       })
   }, [session, matchId])
@@ -64,7 +72,13 @@ export default function PredictPage({ params }: { params: Promise<{ matchId: str
     const res = await fetch('/api/predictions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchId, homeScore: parseInt(homeScore), awayScore: parseInt(awayScore) }),
+      body: JSON.stringify({
+        matchId,
+        homeScore: parseInt(homeScore),
+        awayScore: parseInt(awayScore),
+        ...(match?.askExtraTime && { extraTime }),
+        ...(match?.askPenalty && { penalty }),
+      }),
     })
     const data = await res.json()
     setLoading(false)
@@ -100,6 +114,8 @@ export default function PredictPage({ params }: { params: Promise<{ matchId: str
       </div>
     )
   }
+
+  const hasBonusQuestions = match.askExtraTime || match.askPenalty
 
   return (
     <div className="flex items-center justify-center min-h-[80vh] px-4">
@@ -163,9 +179,93 @@ export default function PredictPage({ params }: { params: Promise<{ matchId: str
                 </div>
               </div>
 
+              {match.askExtraTime && (
+                <p className="text-xs text-gray-500 text-center -mt-1">
+                  สกอร์ภายใน 90 นาที — ถ้ามีต่อเวลาจะนับสกอร์ ณ 120 นาที
+                </p>
+              )}
+
+              {hasBonusQuestions && (
+                <div className="border border-gray-700 rounded-xl p-4 flex flex-col gap-3">
+                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">คำถามพิเศษ</p>
+
+                  {match.askExtraTime && (
+                    <div>
+                      <p className="text-sm text-gray-200 mb-2">
+                        มีต่อเวาไหม?
+                        <span className="text-gray-500 text-xs ml-1">(+1 คะแนน)</span>
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setExtraTime(true)}
+                          className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
+                            extraTime === true
+                              ? 'bg-green-700 border-green-500 text-white'
+                              : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+                          }`}
+                        >
+                          ใช่
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExtraTime(false)}
+                          className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
+                            extraTime === false
+                              ? 'bg-red-800 border-red-600 text-white'
+                              : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+                          }`}
+                        >
+                          ไม่ใช่
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {match.askPenalty && (
+                    <div>
+                      <p className="text-sm text-gray-200 mb-2">
+                        มีจุดโทษไหม?
+                        <span className="text-gray-500 text-xs ml-1">(+1 คะแนน)</span>
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPenalty(true)}
+                          className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
+                            penalty === true
+                              ? 'bg-green-700 border-green-500 text-white'
+                              : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+                          }`}
+                        >
+                          ใช่
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPenalty(false)}
+                          className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-colors ${
+                            penalty === false
+                              ? 'bg-red-800 border-red-600 text-white'
+                              : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+                          }`}
+                        >
+                          ไม่ใช่
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="bg-gray-800 rounded-lg p-3 text-xs text-gray-400 space-y-1">
                 <div className="flex justify-between"><span>ทายผล W/D/L ถูก</span><span className="text-green-400 font-bold">+1 คะแนน</span></div>
                 <div className="flex justify-between"><span>ทายสกอร์ตรง</span><span className="text-yellow-400 font-bold">+3 คะแนน</span></div>
+                {match.askExtraTime && (
+                  <div className="flex justify-between"><span>ทายต่อเวาถูก</span><span className="text-blue-400 font-bold">+1 คะแนน</span></div>
+                )}
+                {match.askPenalty && (
+                  <div className="flex justify-between"><span>ทายจุดโทษถูก</span><span className="text-blue-400 font-bold">+1 คะแนน</span></div>
+                )}
               </div>
 
               <button

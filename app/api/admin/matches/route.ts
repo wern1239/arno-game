@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { homeTeam, awayTeam, matchDate, weekNumber } = await req.json()
+  const { homeTeam, awayTeam, matchDate, weekNumber, askExtraTime, askPenalty } = await req.json()
 
   if (!homeTeam || !awayTeam || !matchDate || !weekNumber) {
     return NextResponse.json({ error: 'กรุณากรอกข้อมูลให้ครบ' }, { status: 400 })
@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
       awayTeam: awayTeam.trim(),
       matchDate: new Date(matchDate),
       weekNumber: parseInt(weekNumber),
+      askExtraTime: askExtraTime ?? false,
+      askPenalty: askPenalty ?? false,
     },
   })
 

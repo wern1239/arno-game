@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { matchId, homeScore, awayScore } = await req.json()
+  const { matchId, homeScore, awayScore, extraTime, penalty } = await req.json()
 
   if (homeScore === undefined || awayScore === undefined || homeScore < 0 || awayScore < 0) {
     return NextResponse.json({ error: 'ข้อมูลสกอร์ไม่ถูกต้อง' }, { status: 400 })
@@ -41,12 +41,19 @@ export async function POST(req: NextRequest) {
 
   const prediction = await prisma.prediction.upsert({
     where: { userId_matchId: { userId: session.user.id, matchId } },
-    update: { homeScore: parseInt(homeScore), awayScore: parseInt(awayScore) },
+    update: {
+      homeScore: parseInt(homeScore),
+      awayScore: parseInt(awayScore),
+      ...(match.askExtraTime && { extraTime: extraTime ?? null }),
+      ...(match.askPenalty && { penalty: penalty ?? null }),
+    },
     create: {
       userId: session.user.id,
       matchId,
       homeScore: parseInt(homeScore),
       awayScore: parseInt(awayScore),
+      extraTime: match.askExtraTime ? (extraTime ?? null) : null,
+      penalty: match.askPenalty ? (penalty ?? null) : null,
     },
   })
 

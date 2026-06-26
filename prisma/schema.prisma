@@ -23,16 +23,20 @@ enum Role {
 }
 
 model Match {
-  id          String      @id @default(cuid())
-  homeTeam    String
-  awayTeam    String
-  matchDate   DateTime
-  homeScore   Int?
-  awayScore   Int?
-  status      MatchStatus @default(UPCOMING)
-  weekNumber  Int
-  createdAt   DateTime    @default(now())
-  predictions Prediction[]
+  id              String      @id @default(cuid())
+  homeTeam        String
+  awayTeam        String
+  matchDate       DateTime
+  homeScore       Int?
+  awayScore       Int?
+  status          MatchStatus @default(UPCOMING)
+  weekNumber      Int
+  createdAt       DateTime    @default(now())
+  askExtraTime    Boolean     @default(false)
+  askPenalty      Boolean     @default(false)
+  extraTimeResult Boolean?
+  penaltyResult   Boolean?
+  predictions     Prediction[]
 }
 
 enum MatchStatus {
@@ -59,6 +63,7 @@ model Sponsor {
 enum SpecialQuestionType {
   FINAL_PAIR
   PODIUM
+  TOP_SCORER
 }
 
 model SpecialQuestion {
@@ -94,6 +99,8 @@ model Prediction {
   homeScore Int
   awayScore Int
   points    Int      @default(0)
+  extraTime Boolean?
+  penalty   Boolean?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
   match     Match    @relation(fields: [matchId], references: [id])

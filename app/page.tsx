@@ -23,6 +23,10 @@ type Match = {
   awayScore: number | null
   status: 'UPCOMING' | 'LIVE' | 'FINISHED'
   weekNumber: number
+  askExtraTime: boolean
+  askPenalty: boolean
+  extraTimeResult: boolean | null
+  penaltyResult: boolean | null
   _count: { predictions: number }
 }
 
@@ -31,6 +35,8 @@ type Prediction = {
   homeScore: number
   awayScore: number
   points: number
+  extraTime: boolean | null
+  penalty: boolean | null
 }
 
 function formatDate(dateStr: string) {
@@ -80,29 +86,64 @@ function MatchCard({ match, prediction }: { match: Match; prediction?: Predictio
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-sm">
-        <span className="text-xs text-gray-600">{match._count.predictions} คนทาย</span>
-        <div className="flex items-center gap-3">
-          {prediction ? (
-            <>
-              <span className="text-gray-400">ทาย: {prediction.homeScore} - {prediction.awayScore}</span>
-              {match.status === 'FINISHED' && (
-                <span className={`font-bold ${prediction.points === 5 ? 'text-yellow-400' : prediction.points === 3 ? 'text-green-400' : 'text-red-400'}`}>
-                  +{prediction.points} คะแนน
-                </span>
-              )}
-              {canPredict && (
-                <Link href={`/predict/${match.id}`} className="text-xs text-blue-400 hover:underline">แก้ไข</Link>
-              )}
-            </>
-          ) : canPredict ? (
-            <Link href={`/predict/${match.id}`} className="bg-green-600 hover:bg-green-500 text-white text-sm px-4 py-1.5 rounded-lg font-semibold transition-colors">
-              ทายผล
-            </Link>
-          ) : (
-            <span className="text-xs text-gray-600">ปิดรับทาย</span>
-          )}
+      <div className="mt-3 flex flex-col gap-1.5">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-xs text-gray-600">{match._count.predictions} คนทาย</span>
+          <div className="flex items-center gap-3">
+            {prediction ? (
+              <>
+                <span className="text-gray-400">ทาย: {prediction.homeScore} - {prediction.awayScore}</span>
+                {match.status === 'FINISHED' && (
+                  <span className={`font-bold ${prediction.points >= 4 ? 'text-yellow-400' : prediction.points >= 3 ? 'text-green-400' : prediction.points > 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                    +{prediction.points} คะแนน
+                  </span>
+                )}
+                {canPredict && (
+                  <Link href={`/predict/${match.id}`} className="text-xs text-blue-400 hover:underline">แก้ไข</Link>
+                )}
+              </>
+            ) : canPredict ? (
+              <Link href={`/predict/${match.id}`} className="bg-green-600 hover:bg-green-500 text-white text-sm px-4 py-1.5 rounded-lg font-semibold transition-colors">
+                ทายผล
+              </Link>
+            ) : (
+              <span className="text-xs text-gray-600">ปิดรับทาย</span>
+            )}
+          </div>
         </div>
+
+        {prediction && (match.askExtraTime || match.askPenalty) && (
+          <div className="flex gap-3 text-xs">
+            {match.askExtraTime && prediction.extraTime !== null && (
+              <span className={
+                match.extraTimeResult === null
+                  ? 'text-gray-500'
+                  : prediction.extraTime === match.extraTimeResult
+                  ? 'text-green-400'
+                  : 'text-red-400'
+              }>
+                ต่อเวา: {prediction.extraTime ? 'ใช่' : 'ไม่ใช่'}
+                {match.status === 'FINISHED' && match.extraTimeResult !== null && (
+                  <span className="ml-1">{prediction.extraTime === match.extraTimeResult ? '✓' : '✗'}</span>
+                )}
+              </span>
+            )}
+            {match.askPenalty && prediction.penalty !== null && (
+              <span className={
+                match.penaltyResult === null
+                  ? 'text-gray-500'
+                  : prediction.penalty === match.penaltyResult
+                  ? 'text-green-400'
+                  : 'text-red-400'
+              }>
+                จุดโทษ: {prediction.penalty ? 'ใช่' : 'ไม่ใช่'}
+                {match.status === 'FINISHED' && match.penaltyResult !== null && (
+                  <span className="ml-1">{prediction.penalty === match.penaltyResult ? '✓' : '✗'}</span>
+                )}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

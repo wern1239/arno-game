@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
 import { TeamCombobox } from '@/app/components/TeamCombobox'
+import { PlayerCombobox } from '@/app/components/PlayerCombobox'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -22,12 +23,13 @@ type Sponsor = {
 
 type SpecialQuestion = {
   id: string
-  type: 'FINAL_PAIR' | 'PODIUM'
+  type: 'FINAL_PAIR' | 'PODIUM' | 'TOP_SCORER'
   isOpen: boolean
   deadline: string | null
   result1: string | null
   result2: string | null
   result3: string | null
+  myPrediction: { points: number } | null
 }
 
 type Prediction = {
@@ -64,7 +66,7 @@ function SpecialQuestionAdmin({ q, onUpdate, onScore }: SpecialQuestionAdminProp
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'done' | 'error'>('idle')
 
-  const label = q.type === 'FINAL_PAIR' ? '⚔️ ทายคู่นัดชิง' : '🏆 ทายอันดับ 1/2/3'
+  const label = q.type === 'FINAL_PAIR' ? '⚔️ ทายคู่นัดชิง' : q.type === 'PODIUM' ? '🏆 ทายอันดับ 1/2/3' : '⚽ ดาวซัลโว 3 อันดับแรก'
   const canSaveAndScore = q.type === 'FINAL_PAIR' ? !!r1 && !!r2 : !!r1 && !!r2 && !!r3
 
   async function saveDeadline() {
@@ -130,11 +132,17 @@ function SpecialQuestionAdmin({ q, onUpdate, onScore }: SpecialQuestionAdminProp
             <TeamCombobox value={r1} onChange={setR1} placeholder="ทีมชิง 1..." />
             <TeamCombobox value={r2} onChange={setR2} placeholder="ทีมชิง 2..." />
           </div>
-        ) : (
+        ) : q.type === 'PODIUM' ? (
           <div className="flex flex-col gap-2">
             <TeamCombobox value={r1} onChange={setR1} placeholder="🥇 แชมป์..." />
             <TeamCombobox value={r2} onChange={setR2} placeholder="🥈 รองแชมป์..." />
             <TeamCombobox value={r3} onChange={setR3} placeholder="🥉 อันดับ 3..." />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <PlayerCombobox value={r1} onChange={setR1} placeholder="🥇 ดาวซัลโวอันดับ 1..." exclude={[r2, r3].filter(Boolean)} />
+            <PlayerCombobox value={r2} onChange={setR2} placeholder="🥈 ดาวซัลโวอันดับ 2..." exclude={[r1, r3].filter(Boolean)} />
+            <PlayerCombobox value={r3} onChange={setR3} placeholder="🥉 ดาวซัลโวอันดับ 3..." exclude={[r1, r2].filter(Boolean)} />
           </div>
         )}
       </div>
@@ -262,7 +270,9 @@ export default function AdminPage() {
   if (status === 'loading') return null
 
   const finished = predictions?.filter((p) => p.match.status === 'FINISHED') ?? []
-  const totalPoints = finished.reduce((sum, p) => sum + p.points, 0)
+  const matchPoints = finished.reduce((sum, p) => sum + p.points, 0)
+  const specialPoints = specialQuestions?.reduce((sum, q) => sum + (q.myPrediction?.points ?? 0), 0) ?? 0
+  const totalPoints = matchPoints + specialPoints
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -417,10 +427,16 @@ export default function AdminPage() {
 
       {/* Admin's own score */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-1">
           <h2 className="font-bold text-gray-300">📊 คะแนนของฉัน (ไม่นับใน leaderboard)</h2>
           <span className="text-2xl font-bold text-green-400">{totalPoints} คะแนน</span>
         </div>
+        {specialPoints > 0 && (
+          <p className="text-xs text-gray-500 text-right mb-4">
+            แมตช์ {matchPoints} + คำถามพิเศษ {specialPoints}
+          </p>
+        )}
+        {specialPoints === 0 && <div className="mb-4" />}
 
         {!predictions?.length ? (
           <p className="text-gray-600 text-sm">ยังไม่มีการทาย</p>

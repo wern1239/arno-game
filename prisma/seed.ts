@@ -30,6 +30,11 @@ async function main() {
     update: {},
     create: { type: 'PODIUM' },
   })
+  await prisma.specialQuestion.upsert({
+    where: { type: 'TOP_SCORER' },
+    update: {},
+    create: { type: 'TOP_SCORER' },
+  })
   console.log('Special questions seeded')
 }
 

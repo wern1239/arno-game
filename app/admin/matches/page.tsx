@@ -16,6 +16,10 @@ type Match = {
   awayScore: number | null
   status: 'UPCOMING' | 'LIVE' | 'FINISHED'
   weekNumber: number
+  askExtraTime: boolean
+  askPenalty: boolean
+  extraTimeResult: boolean | null
+  penaltyResult: boolean | null
   _count: { predictions: number }
 }
 
@@ -32,11 +36,51 @@ const STATUS_LABEL: Record<string, string> = {
   FINISHED: 'จบแล้ว',
 }
 
+function BoolToggle({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: boolean | null
+  onChange: (v: boolean | null) => void
+}) {
+  return (
+    <div>
+      <p className="text-xs text-gray-400 mb-1">{label}</p>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onChange(value === true ? null : true)}
+          className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+            value === true
+              ? 'bg-green-700 border-green-500 text-white'
+              : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+          }`}
+        >
+          ใช่
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(value === false ? null : false)}
+          className={`flex-1 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+            value === false
+              ? 'bg-red-800 border-red-600 text-white'
+              : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500'
+          }`}
+        >
+          ไม่ใช่
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminMatchesPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
 
-  const [form, setForm] = useState({ homeTeam: '', awayTeam: '', matchDate: '', weekNumber: '1' })
+  const [form, setForm] = useState({ homeTeam: '', awayTeam: '', matchDate: '', weekNumber: '1', askExtraTime: false, askPenalty: false })
   const [formError, setFormError] = useState('')
   const [adding, setAdding] = useState(false)
 
@@ -46,6 +90,10 @@ export default function AdminMatchesPage() {
   const [resultHome, setResultHome] = useState('')
   const [resultAway, setResultAway] = useState('')
   const [resultStatus, setResultStatus] = useState<string>('FINISHED')
+  const [resultAskExtraTime, setResultAskExtraTime] = useState(false)
+  const [resultAskPenalty, setResultAskPenalty] = useState(false)
+  const [resultExtraTime, setResultExtraTime] = useState<boolean | null>(null)
+  const [resultPenalty, setResultPenalty] = useState<boolean | null>(null)
   const [savingResult, setSavingResult] = useState(false)
 
   const { data: matches, isLoading } = useSWR<Match[]>('/api/admin/matches', fetcher)
@@ -63,7 +111,7 @@ export default function AdminMatchesPage() {
     const res = await fetch('/api/admin/matches', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, matchDate: form.matchDate + ':00+07:00' }),
+      body: JSON.stringify({ ...form, matchDate: form.matchDate + ':00+07:00', askExtraTime: form.askExtraTime, askPenalty: form.askPenalty }),
     })
     const data = await res.json()
     setAdding(false)
@@ -71,7 +119,7 @@ export default function AdminMatchesPage() {
     if (!res.ok) {
       setFormError(data.error)
     } else {
-      setForm({ homeTeam: '', awayTeam: '', matchDate: '', weekNumber: form.weekNumber })
+      setForm({ homeTeam: '', awayTeam: '', matchDate: '', weekNumber: form.weekNumber, askExtraTime: false, askPenalty: false })
       mutate('/api/admin/matches')
     }
   }
@@ -95,6 +143,10 @@ export default function AdminMatchesPage() {
         status: resultStatus,
         homeScore: resultStatus === 'UPCOMING' ? undefined : parseInt(resultHome),
         awayScore: resultStatus === 'UPCOMING' ? undefined : parseInt(resultAway),
+        askExtraTime: resultAskExtraTime,
+        askPenalty: resultAskPenalty,
+        extraTimeResult: resultAskExtraTime ? resultExtraTime : null,
+        penaltyResult: resultAskPenalty ? resultPenalty : null,
       }),
     })
 
@@ -110,6 +162,10 @@ export default function AdminMatchesPage() {
     setResultHome(match.homeScore !== null ? String(match.homeScore) : '')
     setResultAway(match.awayScore !== null ? String(match.awayScore) : '')
     setResultStatus(match.status)
+    setResultAskExtraTime(match.askExtraTime)
+    setResultAskPenalty(match.askPenalty)
+    setResultExtraTime(match.extraTimeResult)
+    setResultPenalty(match.penaltyResult)
   }
 
   if (status === 'loading') return null
@@ -171,6 +227,27 @@ export default function AdminMatchesPage() {
               />
             </div>
           </div>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={form.askExtraTime}
+                onChange={(e) => setForm({ ...form, askExtraTime: e.target.checked })}
+                className="accent-blue-500 w-4 h-4"
+              />
+              มีต่อเวาไหม?
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={form.askPenalty}
+                onChange={(e) => setForm({ ...form, askPenalty: e.target.checked })}
+                className="accent-blue-500 w-4 h-4"
+              />
+              มีจุดโทษไหม?
+            </label>
+          </div>
+
           <button
             type="submit"
             disabled={adding}
@@ -203,6 +280,16 @@ export default function AdminMatchesPage() {
                     ผล: {match.homeScore} - {match.awayScore}
                   </div>
                 )}
+                {(match.askExtraTime || match.askPenalty) && (
+                  <div className="text-xs text-blue-400 mt-0.5 flex gap-2">
+                    {match.askExtraTime && (
+                      <span>ต่อเวา: {match.extraTimeResult === null ? '?' : match.extraTimeResult ? 'ใช่' : 'ไม่ใช่'}</span>
+                    )}
+                    {match.askPenalty && (
+                      <span>จุดโทษ: {match.penaltyResult === null ? '?' : match.penaltyResult ? 'ใช่' : 'ไม่ใช่'}</span>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -233,7 +320,7 @@ export default function AdminMatchesPage() {
       {/* Result Modal */}
       {resultModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-sm">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-sm max-h-[90vh] overflow-y-auto">
             <h3 className="font-bold text-lg mb-4">อัปเดตแมตช์</h3>
 
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -261,7 +348,7 @@ export default function AdminMatchesPage() {
             </div>
 
             {resultStatus !== 'UPCOMING' && (
-              <div className="flex items-center gap-3 mb-5">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="flex-1">
                   <label className="text-xs text-gray-400 mb-1 block text-center">{resultModal.homeTeam}</label>
                   <input
@@ -285,6 +372,53 @@ export default function AdminMatchesPage() {
                 </div>
               </div>
             )}
+
+            {/* Bonus questions section */}
+            <div className="border border-gray-700 rounded-xl p-4 mb-4 flex flex-col gap-3">
+              <p className="text-xs text-blue-400 font-semibold uppercase tracking-wider">คำถามพิเศษ (+1 คะแนน/ข้อ)</p>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={resultAskExtraTime}
+                  onChange={(e) => {
+                    setResultAskExtraTime(e.target.checked)
+                    if (!e.target.checked) setResultExtraTime(null)
+                  }}
+                  className="accent-blue-500 w-4 h-4"
+                />
+                <span className="text-sm text-gray-300">มีต่อเวาไหม?</span>
+              </label>
+
+              {resultAskExtraTime && (
+                <BoolToggle
+                  label="ผล: มีต่อเวาไหม?"
+                  value={resultExtraTime}
+                  onChange={setResultExtraTime}
+                />
+              )}
+
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={resultAskPenalty}
+                  onChange={(e) => {
+                    setResultAskPenalty(e.target.checked)
+                    if (!e.target.checked) setResultPenalty(null)
+                  }}
+                  className="accent-blue-500 w-4 h-4"
+                />
+                <span className="text-sm text-gray-300">มีจุดโทษไหม?</span>
+              </label>
+
+              {resultAskPenalty && (
+                <BoolToggle
+                  label="ผล: มีจุดโทษไหม?"
+                  value={resultPenalty}
+                  onChange={setResultPenalty}
+                />
+              )}
+            </div>
 
             {resultStatus === 'FINISHED' && (
               <p className="text-xs text-yellow-400 mb-4">⚠️ ระบบจะคำนวณคะแนนให้อัตโนมัติ</p>
