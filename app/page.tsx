@@ -122,7 +122,7 @@ function MatchCard({ match, prediction }: { match: Match; prediction?: Predictio
                   ? 'text-green-400'
                   : 'text-red-400'
               }>
-                ต่อเวา: {prediction.extraTime ? 'ใช่' : 'ไม่ใช่'}
+                ต่อเวลา: {prediction.extraTime ? 'ใช่' : 'ไม่ใช่'}
                 {match.status === 'FINISHED' && match.extraTimeResult !== null && (
                   <span className="ml-1">{prediction.extraTime === match.extraTimeResult ? '✓' : '✗'}</span>
                 )}

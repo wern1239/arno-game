@@ -235,7 +235,7 @@ export default function AdminMatchesPage() {
                 onChange={(e) => setForm({ ...form, askExtraTime: e.target.checked })}
                 className="accent-blue-500 w-4 h-4"
               />
-              มีต่อเวาไหม?
+              มีต่อเวลาไหม?
             </label>
             <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-300">
               <input
@@ -283,7 +283,7 @@ export default function AdminMatchesPage() {
                 {(match.askExtraTime || match.askPenalty) && (
                   <div className="text-xs text-blue-400 mt-0.5 flex gap-2">
                     {match.askExtraTime && (
-                      <span>ต่อเวา: {match.extraTimeResult === null ? '?' : match.extraTimeResult ? 'ใช่' : 'ไม่ใช่'}</span>
+                      <span>ต่อเวลา: {match.extraTimeResult === null ? '?' : match.extraTimeResult ? 'ใช่' : 'ไม่ใช่'}</span>
                     )}
                     {match.askPenalty && (
                       <span>จุดโทษ: {match.penaltyResult === null ? '?' : match.penaltyResult ? 'ใช่' : 'ไม่ใช่'}</span>
@@ -387,12 +387,12 @@ export default function AdminMatchesPage() {
                   }}
                   className="accent-blue-500 w-4 h-4"
                 />
-                <span className="text-sm text-gray-300">มีต่อเวาไหม?</span>
+                <span className="text-sm text-gray-300">มีต่อเวลาไหม?</span>
               </label>
 
               {resultAskExtraTime && (
                 <BoolToggle
-                  label="ผล: มีต่อเวาไหม?"
+                  label="ผล: มีต่อเวลาไหม?"
                   value={resultExtraTime}
                   onChange={setResultExtraTime}
                 />

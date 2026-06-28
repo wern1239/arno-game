@@ -192,7 +192,7 @@ export default function PredictPage({ params }: { params: Promise<{ matchId: str
                   {match.askExtraTime && (
                     <div>
                       <p className="text-sm text-gray-200 mb-2">
-                        มีต่อเวาไหม?
+                        มีต่อเวลาไหม?
                         <span className="text-gray-500 text-xs ml-1">(+1 คะแนน)</span>
                       </p>
                       <div className="flex gap-2">
@@ -261,7 +261,7 @@ export default function PredictPage({ params }: { params: Promise<{ matchId: str
                 <div className="flex justify-between"><span>ทายผล W/D/L ถูก</span><span className="text-green-400 font-bold">+1 คะแนน</span></div>
                 <div className="flex justify-between"><span>ทายสกอร์ตรง</span><span className="text-yellow-400 font-bold">+3 คะแนน</span></div>
                 {match.askExtraTime && (
-                  <div className="flex justify-between"><span>ทายต่อเวาถูก</span><span className="text-blue-400 font-bold">+1 คะแนน</span></div>
+                  <div className="flex justify-between"><span>ทายต่อเวลาถูก</span><span className="text-blue-400 font-bold">+1 คะแนน</span></div>
                 )}
                 {match.askPenalty && (
                   <div className="flex justify-between"><span>ทายจุดโทษถูก</span><span className="text-blue-400 font-bold">+1 คะแนน</span></div>
